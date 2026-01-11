@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Flood Visualizer - Open Source</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+    <!-- Landing Page -->
+    <div id="landing-page" class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-black text-gray-900 mb-4">
+                🌊 AR Flood Visualizer
+            </h1>
+            <p class="text-xl text-gray-600 mb-2">
+                See potential flood levels through your camera
+            </p>
+            <p class="text-sm text-gray-500">
+                Open source • Camera-based overlay • Works on all devices
+            </p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Configure Your Flood Scenario</h2>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Location/Address (Optional)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="address-input"
+                        placeholder="e.g., 123 Main St, City, State"
+                        class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Flood Risk Score (0-10)
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input 
+                            type="range" 
+                            id="score-slider"
+                            min="0" 
+                            max="10" 
+                            value="5"
+                            class="flex-1"
+                        />
+                        <span id="score-display" class="text-2xl font-bold text-blue-600 w-12 text-center">5</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Higher score = deeper water. 0-3: Low risk, 4-6: Moderate, 7-10: High risk
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Custom Flood Depth (Optional)
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input 
+                            type="number" 
+                            id="depth-input"
+                            placeholder="meters"
+                            step="0.1"
+                            min="0"
+                            max="3"
+                            class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
+                        />
+                        <select id="depth-unit" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none">
+                            <option value="meters">meters</option>
+                            <option value="feet">feet</option>
+                        </select>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Leave empty to use risk score. Example: 0.6m = knee-deep, 1.2m = waist-deep
+                    </p>
+                </div>
+            </div>
+
+            <button 
+                onclick="startARExperience()"
+                class="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition duration-200 text-lg"
+            >
+                📷 Start AR Camera
+            </button>
+        </div>
+
+        <!-- Info Section -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">✨ Features</h3>
+                <ul class="space-y-2 text-sm text-gray-600">
+                    <li>• Real-time camera overlay</li>
+                    <li>• Calibration for accurate heights</li>
+                    <li>• Screenshot and share</li>
+                    <li>• Works on mobile & desktop</li>
+                    <li>• No app install required</li>
+                </ul>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">🔒 Privacy</h3>
+                <ul class="space-y-2 text-sm text-gray-600">
+                    <li>• All processing happens locally</li>
+                    <li>• Camera feed never uploaded</li>
+                    <li>• No data stored on servers</li>
+                    <li>• Open source code</li>
+                    <li>• HTTPS camera access only</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6 mb-8">
+            <h3 class="text-lg font-bold text-yellow-900 mb-2">⚠️ Important Disclaimer</h3>
+            <p class="text-sm text-yellow-800">
+                This is an <strong>educational visualization tool</strong>. It provides illustrative flood depth overlays and is NOT a precise measurement or official flood prediction. Always consult official flood maps (FEMA), local authorities, and professional surveyors for actual flood risk assessments. Do not use this tool for emergency decision-making.
+            </p>
+        </div>
+
+        <div class="text-center text-gray-500 text-sm">
+            <p class="mb-2">Made with ❤️ for the open source community</p>
+            <p>
+                <a href="https://github.com/yourusername/ar-flood-visualizer" class="text-blue-600 hover:underline">
+                    View on GitHub
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- AR Camera View (Hidden initially) -->
+    <div id="ar-view" class="hidden fixed inset-0 bg-black z-50">
+        <!-- Video and Canvas -->
+        <video 
+            id="camera-video" 
+            autoplay 
+            playsinline 
+            muted
+            class="hidden"
+        ></video>
+        <canvas 
+            id="ar-canvas" 
+            class="absolute inset-0 w-full h-full"
+        ></canvas>
+
+        <!-- Top Info Bar -->
+        <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
+            <div class="flex items-center justify-between">
+                <div class="text-white">
+                    <div class="flex items-center space-x-2">
+                        <div>
+                            <div class="text-xs opacity-75" id="ar-address">Location</div>
+                            <div class="text-sm font-bold" id="ar-depth-label">Flood Depth</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="text-white text-right">
+                        <div class="text-lg font-bold" id="ar-risk-score">5/10</div>
+                        <div class="text-[10px] opacity-80 uppercase" id="ar-risk-level">MODERATE</div>
+                    </div>
+                    <button 
+                        onclick="stopAR()"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition"
+                    >
+                        ✕ Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-xl shadow-lg p-3 z-10">
+            <div class="grid grid-cols-3 gap-2 mb-3">
+                <button
+                    id="calibrate-btn"
+                    onclick="startCalibration()"
+                    class="flex flex-col items-center justify-center bg-purple-600 text-white py-2 px-2 rounded-lg hover:bg-purple-700 transition"
+                >
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="4"></circle>
+                    </svg>
+                    <span class="text-[10px] font-semibold">Calibrate</span>
+                </button>
+
+                <button
+                    onclick="captureScreenshot()"
+                    class="flex flex-col items-center justify-center bg-blue-600 text-white py-2 px-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span class="text-[10px] font-semibold">Photo</span>
+                </button>
+
+                <button
+                    onclick="shareAR()"
+                    class="flex flex-col items-center justify-center bg-green-600 text-white py-2 px-2 rounded-lg hover:bg-green-700 transition"
+                >
+                    <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+                    </svg>
+                    <span class="text-[10px] font-semibold">Share</span>
+                </button>
+            </div>
+            <p class="text-[10px] text-gray-300 text-center leading-tight">
+                Illustrative visualization only. Not a precise measurement.
+            </p>
+        </div>
+
+        <!-- Calibration Instruction -->
+        <div id="calibrate-instruction" class="hidden absolute bottom-24 left-1/2 transform -translate-x-1/2 z-10">
+            <div class="bg-purple-600/90 backdrop-blur-sm text-white px-6 py-3 rounded-full text-sm font-medium shadow-lg">
+                👆 Tap the floor or door frame to calibrate
+            </div>
+        </div>
+
+        <!-- General Instruction -->
+        <div id="general-instruction" class="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10 transition-opacity duration-1000">
+            <div class="bg-black/70 backdrop-blur-sm text-white px-6 py-3 rounded-full text-sm font-medium shadow-lg">
+                📷 Point camera at your room or property
+            </div>
+        </div>
+    </div>
+
+    <script src="ar-flood.js"></script>
+</body>
+</html>
