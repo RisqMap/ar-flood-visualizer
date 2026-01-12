@@ -135,107 +135,27 @@ function startARExperience() {
 }
 
 async function handleStartAR() {
-    console.log('🎥 Starting AR camera...');
-    
     try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            setError('Camera API is not supported on this device.');
-            return;
-        }
-
-        const constraints = {
-            video: {
-                facingMode: 'environment',
-                width: { ideal: 1280, max: 1920 },
-                height: { ideal: 720, max: 1080 },
-                aspectRatio: { ideal: 16/9 },
-                frameRate: { ideal: 30, max: 30 }
-            },
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
             audio: false
-        };
-
-        console.log('📸 Requesting camera permission...');
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('✅ Camera permission granted, stream:', stream.id);
+        });
         
         cameraStream = stream;
 
-        if (videoRef) {
+        if (videoRef && canvasRef) {
             videoRef.srcObject = stream;
             videoRef.setAttribute('playsinline', 'true');
-            videoRef.setAttribute('webkit-playsinline', 'true');
-            videoRef.setAttribute('autoplay', 'true');
             videoRef.muted = true;
             
-            console.log('🎬 Video element configured, waiting for metadata...');
-
-            // Set canvas dimensions immediately from stream settings
-            const videoTrack = stream.getVideoTracks()[0];
-            const settings = videoTrack.getSettings();
-            console.log('📐 Video track settings:', settings);
-            
-            if (canvasRef) {
-                // CRITICAL: Always set dimensions, never leave at 0x0
-                canvasRef.width = settings.width || 1280;
-                canvasRef.height = settings.height || 720;
-                canvasSizeLocked = true;
-                console.log(`📐 Canvas configured to ${canvasRef.width}x${canvasRef.height}`);
-            }
-
-            // Use onplaying event - most reliable indicator
-            videoRef.onplaying = () => {
-                console.log('✅ Video is playing!');
-                isARReady = true;
-            };
-
-            // CRITICAL: Delay startRendering until video is in DOM
-            setTimeout(() => {
-                console.log('🎬 Starting render loop after DOM commit...');
+            videoRef.onloadedmetadata = () => {
+                videoRef.play();
                 startRendering();
-            }, 50);
-
-            // Try to play after a short delay
-            setTimeout(() => {
-                if (videoRef) {
-                    console.log('🚀 Attempting play...');
-                    videoRef.play()
-                        .then(() => console.log('✅ Play promise resolved'))
-                        .catch(e => console.warn('⚠️ Play failed:', e));
-                }
-            }, 150);
-
-            // Emergency fallback: force UI update if stream is active
-            setTimeout(() => {
-                if (stream.active && !isARReady) {
-                    console.warn('🚨 Emergency: Stream active, updating UI...');
-                    isARReady = true;
-                }
-            }, 2000);
-
-            // Error handler for video element
-            videoRef.onerror = (e) => {
-                console.error('❌ Video element error:', e);
-                setError('Video feed error. Please try again.');
+                isARReady = true;
             };
         }
     } catch (err) {
-        console.error('❌ Camera access error:', err);
-
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            setError('Camera permission denied. Please enable camera access in your browser settings and reload.');
-        } else if (err.name === 'NotFoundError') {
-            setError('No camera found on this device.');
-        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-            setError('Camera is already in use by another tab or application. Please close other apps/tabs using the camera and try again.');
-        } else if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
-            setError('Camera does not support the requested settings. Try using a different device.');
-        } else if (err.name === 'AbortError') {
-            setError('Camera access was aborted. Please try again.');
-        } else {
-            setError(`Unable to access camera: ${err.message || 'Unknown error'}. Make sure no other apps are using it.`);
-        }
-        
-        showErrorUI();
+        setError('Unable to access camera. Please enable camera permissions.');
     }
 }
 
