@@ -2,23 +2,26 @@
 // Now with REAL MEASUREMENT using reference objects (doors, people)
 
 /**
- * AR Flood Overlay Component with Reference Object Measurement
+ * AR Flood Overlay Component with LOCKED Reference Object Calibration
  * 
  * HOW IT WORKS:
  * 1. User selects a reference object (door = 80", person = 69"/64", or custom height)
  * 2. User taps TOP of reference object (e.g., top of door frame)
  * 3. User taps BOTTOM of reference object (e.g., floor level)
  * 4. System calculates: pixelsPerInch = pixelDistance / realWorldInches
- * 5. Water drawn at accurate height: waterY = bottomY - (waterInches × pixelsPerInch)
+ * 5. Water drawn at LOCKED height: waterY = bottomY - (waterInches × pixelsPerInch)
+ * 6. Calibration is LOCKED to that moment - does NOT adjust as you move
  * 
- * ACCURACY: ±5-10% (good enough for visualization without ML)
+ * ACCURACY: ±5-10% for single position (requires recalibration if you move)
  * 
  * TROUBLESHOOTING:
  * - Camera not opening: Check browser permissions, HTTPS required
  * - Wrong water height: Ensure reference object is on same plane as ground
+ * - Water doesn't change after moving: EXPECTED - recalibrate after moving
  * - Mobile issues: Ensure playsinline and muted attributes set
  * 
- * NOT TRUE AR: This is a 2D camera overlay with real-world measurement, not 3D spatial AR (WebXR).
+ * NOT TRUE AR: This is a 2D camera overlay with measurement-based calibration, not 3D spatial AR (WebXR).
+ * For true AR with depth sensing and movement tracking, use ARCore, ARKit, or WebXR APIs.
  */
 
 // Reference object constants (heights in inches)
@@ -236,15 +239,24 @@ function startRendering() {
 
         // Get current water info
         const waterInfo = getWaterHeight(floodConfig.score, floodConfig.modeledDepth);
-        const waterHeightRatio = waterInfo.height / CAMERA_HEIGHT;
-
-        // Calculate water level
-        let waterY = canvas.height * (1 - waterHeightRatio);
         
-        if (calibrationY !== null) {
-            // User calibrated - use their reference point as "ground level"
-            const pixelsPerMeter = canvas.height / 2.5;
-            waterY = calibrationY - (waterInfo.height * pixelsPerMeter);
+        // Convert water height from meters to inches for calculation
+        const waterHeightInches = waterInfo.height * 39.3701; // meters to inches
+        
+        // Calculate water level using LOCKED CALIBRATION
+        let waterY;
+        if (pixelsPerInch !== null && bottomPoint !== null) {
+            // LOCKED CALIBRATION - Use scale from calibration
+            const waterPixelHeight = waterHeightInches * pixelsPerInch;
+            // Anchor to calibrated ground position (where user tapped bottom)
+            const groundY = bottomPoint.y;
+            waterY = groundY - waterPixelHeight;
+        } else {
+            // Uncalibrated preview - rough estimate
+            const assumedPhoneHeightInches = 60; // ~5 feet
+            const estimatedPixelsPerInch = canvas.height / assumedPhoneHeightInches;
+            const previewWaterPixelHeight = waterHeightInches * estimatedPixelsPerInch;
+            waterY = canvas.height - previewWaterPixelHeight;
         }
 
         const waveTime = Date.now() / 1000;
